@@ -4,41 +4,6 @@ write-host "Starting script at $(Get-Date)"
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 Install-Module -Name Az.Synapse -Force
 
-# Handle cases where the user has multiple subscriptions
-$subs = Get-AzSubscription | Select-Object
-if($subs.GetType().IsArray -and $subs.length -gt 1){
-        Write-Host "You have multiple Azure subscriptions - please select the one you want to use:"
-        for($i = 0; $i -lt $subs.length; $i++)
-        {
-                Write-Host "[$($i)]: $($subs[$i].Name) (ID = $($subs[$i].Id))"
-        }
-        $selectedIndex = -1
-        $selectedValidIndex = 0
-        while ($selectedValidIndex -ne 1)
-        {
-                $enteredValue = Read-Host("Enter 0 to $($subs.Length - 1)")
-                if (-not ([string]::IsNullOrEmpty($enteredValue)))
-                {
-                    if ([int]$enteredValue -in (0..$($subs.Length - 1)))
-                    {
-                        $selectedIndex = [int]$enteredValue
-                        $selectedValidIndex = 1
-                    }
-                    else
-                    {
-                        Write-Output "Please enter a valid subscription number."
-                    }
-                }
-                else
-                {
-                    Write-Output "Please enter a valid subscription number."
-                }
-        }
-        $selectedSub = $subs[$selectedIndex].Id
-        Select-AzSubscription -SubscriptionId $selectedSub
-        az account set --subscription $selectedSub
-}
-
 # Prompt user for a password for the SQL Database
 $sqlUser = "SQLUser"
 write-host ""
@@ -81,22 +46,9 @@ foreach ($provider in $provider_list){
 Write-Host "Your randomly-generated suffix for Azure resources is $suffix"
 $resourceGroupName = "dp203-$suffix"
 
-# Choose a random region
-Write-Host "Finding an available region. This may take several minutes...";
-$delay = 0, 30, 60, 90, 120 | Get-Random
-Start-Sleep -Seconds $delay # random delay to stagger requests from multi-student classes
-$preferred_list = "australiaeast","centralus","southcentralus","eastus2","northeurope","southeastasia","uksouth","westeurope","westus","westus2"
-$locations = Get-AzLocation | Where-Object {
-    $_.Providers -contains "Microsoft.Synapse" -and
-    $_.Providers -contains "Microsoft.Sql" -and
-    $_.Providers -contains "Microsoft.Storage" -and
-    $_.Providers -contains "Microsoft.Compute" -and
-    $_.Providers -contains "Microsoft.Purview" -and
-    $_.Location -in $preferred_list
-}
-$max_index = $locations.Count - 1
-$rand = (0..$max_index) | Get-Random
-$Region = $locations.Get($rand).Location
+# Set a region
+$properties = az group list | ConvertFrom-Json
+$Region = $properties[1].location
 
 # Test for subscription Azure SQL capacity constraints in randomly selected regions
 # (for some subsription types, quotas are adjusted dynamically based on capacity)
