@@ -19,7 +19,7 @@ Write-Host "Preparing to deploy. This may take several minutes...";
 $delay = 0, 30, 60, 90, 120 | Get-Random
 Start-Sleep -Seconds $delay # random delay to stagger requests from multi-student classes
 
-# Get the location
+# Set a region
 $properties = az group list | ConvertFrom-Json
 $Region = $properties[1].location
 
